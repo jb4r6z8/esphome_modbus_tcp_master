@@ -74,19 +74,20 @@ public:
 
     void loop() override {
         uint32_t now = millis();
-        
-        // Non-blocking connection health check - keep 5 second interval
-        if (now - last_connection_attempt_ > 5000) {
-            last_connection_attempt_ = now;
-            start_connection_check();  // Start non-blocking check
-        }
-        
-        // Process connection check state machine (non-blocking, max 5ms per call)
-        process_connection_check();
-        
-        // Watchdog handling
-        if (watchdog_enabled_ && now - last_watchdog_time_ > watchdog_interval_) {
-            handle_watchdog();
+        if ( 1 == 0 ) {
+            // Non-blocking connection health check - keep 5 second interval
+            if (now - last_connection_attempt_ > 5000) {
+                last_connection_attempt_ = now;
+                start_connection_check();  // Start non-blocking check
+            }
+            
+            // Process connection check state machine (non-blocking, max 5ms per call)
+            process_connection_check();
+            
+            // Watchdog handling
+            if (watchdog_enabled_ && now - last_watchdog_time_ > watchdog_interval_) {
+                handle_watchdog();
+            }
         }
         
         // Yield regularly for responsiveness
@@ -131,19 +132,17 @@ public:
             return response;
         }
 
-        delay(500);
-
         std::vector<uint8_t> request = build_read_request(start_address, count, function);
         
         if (!send_data(sock, request)) {
-            ::close(sock);
+            //::close(sock);
             response.error_message = "Send failed";
             is_connected_ = false;
             return response;
         }
 
         std::vector<uint8_t> resp_data = receive_data(sock);
-        ::close(sock);
+        //::close(sock);
 
         if (resp_data.empty()) {
             response.error_message = "Receive failed";
@@ -233,6 +232,8 @@ private:
     bool is_connected_;
     uint32_t last_connection_attempt_;
     uint16_t transaction_id_ = 1;
+
+    int data_sock_ = -1;
     
     // Watchdog variables
     uint16_t watchdog_register_;
@@ -435,78 +436,87 @@ private:
     }
 
     int create_connection() {
-        int sock = ::socket(AF_INET, SOCK_STREAM, 0);
-        if (sock < 0) {
-            ESP_LOGV(TAG, "Could not create socket: %d", errno);
-            return -1;
-        }
-
-        // Set socket to non-blocking mode FIRST
-        int flags = ::fcntl(sock, F_GETFL, 0);
-        ::fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-
-        // Very short timeouts for data operations
-        struct timeval timeout;
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;  // 100ms timeout - even shorter
-        ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        ::setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-        struct sockaddr_in server_addr;
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = htons(port_);
-        
-        if (::inet_aton(host_.c_str(), &server_addr.sin_addr) == 0) {
-            struct hostent *he = ::gethostbyname(host_.c_str());
-            if (he == nullptr) {
-                ESP_LOGV(TAG, "DNS resolution failed: %s", host_.c_str());
-                ::close(sock);
+        if (data_sock_ < 0 ) {
+            data_sock_ = ::socket(AF_INET, SOCK_STREAM, 0);
+            if (data_sock_ < 0) {
+                ESP_LOGV(TAG, "Could not create socket: %d", errno);
+                data_sock_ = -1;
                 return -1;
             }
-            memcpy(&server_addr.sin_addr, he->h_addr, sizeof(server_addr.sin_addr));
-        }
-
-        // Non-blocking connect with timeout
-        int connect_result = ::connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr));
-        if (connect_result < 0) {
-            if (errno == EINPROGRESS) {
-                // Connection in progress, wait with select()
-                fd_set write_fds;
-                FD_ZERO(&write_fds);
-                FD_SET(sock, &write_fds);
-                
-                struct timeval connect_timeout;
-                connect_timeout.tv_sec = 0;
-                connect_timeout.tv_usec = 100000;  // 100ms max wait - very short
-                
-                int select_result = ::select(sock + 1, nullptr, &write_fds, nullptr, &connect_timeout);
-                if (select_result <= 0) {
-                    ESP_LOGV(TAG, "Connection timeout to %s:%d", host_.c_str(), port_);
-                    ::close(sock);
+    
+            // Set socket to non-blocking mode FIRST
+            int flags = ::fcntl(data_sock_, F_GETFL, 0);
+            ::fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+    
+            // Very short timeouts for data operations
+            struct timeval timeout;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 100000;  // 100ms timeout - even shorter
+            ::setsockopt(data_sock_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+            ::setsockopt(data_sock_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    
+            struct sockaddr_in server_addr;
+            server_addr.sin_family = AF_INET;
+            server_addr.sin_port = htons(port_);
+            
+            if (::inet_aton(host_.c_str(), &server_addr.sin_addr) == 0) {
+                struct hostent *he = ::gethostbyname(host_.c_str());
+                if (he == nullptr) {
+                    ESP_LOGV(TAG, "DNS resolution failed: %s", host_.c_str());
+                    ::close(data_sock_);
+                    data_sock_ = -1;
                     return -1;
                 }
-                
-                // Check if connection actually succeeded
-                int error = 0;
-                socklen_t len = sizeof(error);
-                ::getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
-                if (error != 0) {
-                    ESP_LOGV(TAG, "Connection failed to %s:%d (error: %d)", host_.c_str(), port_, error);
-                    ::close(sock);
-                    return -1;
-                }
-            } else {
-                ESP_LOGV(TAG, "Immediate connection failure to %s:%d", host_.c_str(), port_);
-                ::close(sock);
-                return -1;
+                memcpy(&server_addr.sin_addr, he->h_addr, sizeof(server_addr.sin_addr));
             }
+    
+            // Non-blocking connect with timeout
+            int connect_result = ::connect(data_sock_, (struct sockaddr*)&server_addr, sizeof(server_addr));
+            if (connect_result < 0) {
+                if (errno == EINPROGRESS) {
+                    // Connection in progress, wait with select()
+                    fd_set write_fds;
+                    FD_ZERO(&write_fds);
+                    FD_SET(data_sock_, &write_fds);
+                    
+                    struct timeval connect_timeout;
+                    connect_timeout.tv_sec = 0;
+                    connect_timeout.tv_usec = 100000;  // 100ms max wait - very short
+                    
+                    int select_result = ::select(data_sock_ + 1, nullptr, &write_fds, nullptr, &connect_timeout);
+                    if (select_result <= 0) {
+                        ESP_LOGV(TAG, "Connection timeout to %s:%d", host_.c_str(), port_);
+                        ::close(data_sock_);
+                        data_sock_ = -1;
+                        return -1;
+                    }
+                    
+                    // Check if connection actually succeeded
+                    int error = 0;
+                    socklen_t len = sizeof(error);
+                    ::getsockopt(data_sock_, SOL_SOCKET, SO_ERROR, &error, &len);
+                    if (error != 0) {
+                        ESP_LOGV(TAG, "Connection failed to %s:%d (error: %d)", host_.c_str(), port_, error);
+                        ::close(data_sock_);
+                        data_sock_ = -1;
+                        return -1;
+                    }
+                } else {
+                    ESP_LOGV(TAG, "Immediate connection failure to %s:%d", host_.c_str(), port_);
+                    ::close(data_sock_);
+                    data_sock_ = -1;
+                    return -1;
+                }
+            }
+    
+            // Set back to blocking mode for data transfer but with short timeouts
+            ::fcntl(data_sock_, F_SETFL, flags);
+
+            delay(500);
+    
+            ESP_LOGVV(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
-
-        // Set back to blocking mode for data transfer but with short timeouts
-        ::fcntl(sock, F_SETFL, flags);
-
-        ESP_LOGVV(TAG, "Connected to %s:%d", host_.c_str(), port_);
-        return sock;
+        return data_sock_;
     }
 
     bool send_data(int sock, const std::vector<uint8_t>& data) {
