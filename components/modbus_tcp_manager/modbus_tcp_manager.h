@@ -446,7 +446,7 @@ private:
     
             // Set socket to non-blocking mode FIRST
             int flags = ::fcntl(data_sock_, F_GETFL, 0);
-            ::fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+            ::fcntl(data_sock_, F_SETFL, flags | O_NONBLOCK);
     
             // Very short timeouts for data operations
             struct timeval timeout;
