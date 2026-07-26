@@ -131,6 +131,8 @@ public:
             return response;
         }
 
+        delay(2000);
+
         std::vector<uint8_t> request = build_read_request(start_address, count, function);
         
         if (!send_data(sock, request)) {
