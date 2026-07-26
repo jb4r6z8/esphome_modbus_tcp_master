@@ -131,7 +131,7 @@ public:
             return response;
         }
 
-        delay(2000);
+        delay(500);
 
         std::vector<uint8_t> request = build_read_request(start_address, count, function);
         
@@ -147,7 +147,7 @@ public:
 
         if (resp_data.empty()) {
             response.error_message = "Receive failed";
-            is_connected_ = true;
+            is_connected_ = false;
             return response;
         }
 
@@ -448,7 +448,7 @@ private:
         // Very short timeouts for data operations
         struct timeval timeout;
         timeout.tv_sec = 0;
-        timeout.tv_usec = 500000;  // 100ms timeout - even shorter
+        timeout.tv_usec = 100000;  // 100ms timeout - even shorter
         ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         ::setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
@@ -477,7 +477,7 @@ private:
                 
                 struct timeval connect_timeout;
                 connect_timeout.tv_sec = 0;
-                connect_timeout.tv_usec = 500000;  // 100ms max wait - very short
+                connect_timeout.tv_usec = 100000;  // 100ms max wait - very short
                 
                 int select_result = ::select(sock + 1, nullptr, &write_fds, nullptr, &connect_timeout);
                 if (select_result <= 0) {
