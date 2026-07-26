@@ -136,6 +136,8 @@ public:
         
         if (!send_data(sock, request)) {
             //::close(sock);
+           ::close(data_sock_);
+            data_sock_ = -1;
             response.error_message = "Send failed";
             is_connected_ = false;
             return response;
@@ -145,6 +147,8 @@ public:
         //::close(sock);
 
         if (resp_data.empty()) {
+           ::close(data_sock_);
+            data_sock_ = -1;
             response.error_message = "Receive failed";
             is_connected_ = false;
             return response;
