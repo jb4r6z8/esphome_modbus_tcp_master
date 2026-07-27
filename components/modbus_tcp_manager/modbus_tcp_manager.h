@@ -176,7 +176,6 @@ public:
         
         bool success = send_data(sock, request);
         if (success) {
-            delay(500);
             std::vector<uint8_t> response = receive_data(sock);
             success = !response.empty() && response.size() >= 8;
         }
@@ -211,6 +210,7 @@ public:
         
         bool success = send_data(sock, request);
         if (success) {
+            delay(500);
             std::vector<uint8_t> response = receive_data(sock);
             success = !response.empty() && response.size() >= 8;
         }
