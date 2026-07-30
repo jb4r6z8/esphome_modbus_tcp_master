@@ -135,7 +135,7 @@ public:
         std::vector<uint8_t> request = build_read_request(start_address, count, function);
         
         if (!send_data(sock, request)) {
-           ::close(data_sock_);
+            ::close(data_sock_);
             data_sock_ = -1;
             response.error_message = "Send failed";
             is_connected_ = false;
@@ -145,7 +145,7 @@ public:
         std::vector<uint8_t> resp_data = receive_data(sock);
 
         if (resp_data.empty()) {
-           ::close(data_sock_);
+            ::close(data_sock_);
             data_sock_ = -1;
             response.error_message = "Receive failed";
             is_connected_ = false;
@@ -153,6 +153,14 @@ public:
         }
 
         if (!parse_read_response(resp_data, response, function)) {
+            is_connected_ = false;
+            return response;
+        }
+
+        if (response.data.size() != count) {
+            ::close(data_sock_);
+            data_sock_ = -1;
+            response.error_message = "Response wrong count";
             is_connected_ = false;
             return response;
         }
