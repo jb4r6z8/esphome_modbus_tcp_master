@@ -330,7 +330,7 @@ private:
                 
                 struct timeval timeout;
                 timeout.tv_sec = 0;
-                timeout.tv_usec = 10000;  // 1ms (1000) - 10ms (10000) timeout - very fast check
+                timeout.tv_usec = 1000;  // 1ms (1000) - 10ms (10000) timeout - very fast check
                 
                 int select_result = ::select(connection_check_sock_ + 1, nullptr, &write_fds, &error_fds, &timeout);
                 
@@ -460,7 +460,7 @@ private:
             // Very short timeouts for data operations
             struct timeval timeout;
             timeout.tv_sec = 0;
-            timeout.tv_usec = 100000;  // 100000 ->100ms timeout - even shorter
+            timeout.tv_usec = 500000;  // 100000 ->100ms timeout - even shorter
             ::setsockopt(data_sock_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
             ::setsockopt(data_sock_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     
