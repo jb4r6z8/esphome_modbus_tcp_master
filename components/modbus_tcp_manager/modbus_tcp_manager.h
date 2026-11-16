@@ -524,7 +524,7 @@ private:
             // Set back to blocking mode for data transfer but with short timeouts
             ::fcntl(data_sock_, F_SETFL, flags);
 
-            delay(500);
+            delay(200);
     
             ESP_LOGD(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
