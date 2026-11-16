@@ -330,14 +330,14 @@ private:
                 
                 struct timeval timeout;
                 timeout.tv_sec = 0;
-                timeout.tv_usec = 1000;  // 1ms timeout - very fast check
+                timeout.tv_usec = 10000;  // 1ms (1000) - 10ms (10000) timeout - very fast check
                 
                 int select_result = ::select(connection_check_sock_ + 1, nullptr, &write_fds, &error_fds, &timeout);
                 
                 if (select_result > 0) {
                     if (FD_ISSET(connection_check_sock_, &error_fds)) {
                         // Connection failed
-                        ESP_LOGV(TAG, "Connection check failed (error fd set)");
+                        ESP_LOGD(TAG, "Connection check failed (error fd set)");
                         connection_check_success_ = false;
                         connection_check_state_ = ConnectionCheckState::CLEANUP;
                     } else if (FD_ISSET(connection_check_sock_, &write_fds)) {
@@ -347,17 +347,17 @@ private:
                         ::getsockopt(connection_check_sock_, SOL_SOCKET, SO_ERROR, &error, &len);
                         
                         if (error == 0) {
-                            ESP_LOGV(TAG, "Connection check succeeded");
+                            ESP_LOGD(TAG, "Connection check succeeded");
                             connection_check_success_ = true;
                         } else {
-                            ESP_LOGV(TAG, "Connection check failed (socket error: %d)", error);
+                            ESP_LOGD(TAG, "Connection check failed (socket error: %d)", error);
                             connection_check_success_ = false;
                         }
                         connection_check_state_ = ConnectionCheckState::CLEANUP;
                     }
                 } else if (now - connection_check_start_time_ > 500) {
                     // Timeout after 500ms
-                    ESP_LOGV(TAG, "Connection check timeout");
+                    ESP_LOGD(TAG, "Connection check timeout");
                     connection_check_success_ = false;
                     connection_check_state_ = ConnectionCheckState::CLEANUP;
                 }
@@ -374,12 +374,12 @@ private:
                 // Update connection status based on the check result
                 if (connection_check_success_) {
                     if (!is_connected_) {
-                        ESP_LOGI(TAG, "Modbus connection restored to %s:%d", host_.c_str(), port_);
+                        ESP_LOGD(TAG, "Modbus connection restored to %s:%d", host_.c_str(), port_);
                         is_connected_ = true;
                     }
                 } else {
                     if (is_connected_) {
-                        ESP_LOGW(TAG, "Modbus connection lost to %s:%d", host_.c_str(), port_);
+                        ESP_LOGD(TAG, "Modbus connection lost to %s:%d", host_.c_str(), port_);
                         is_connected_ = false;
                     }
                 }
@@ -394,7 +394,7 @@ private:
         last_watchdog_time_ = millis();
         
         if (!is_connected_) {
-            ESP_LOGW(TAG, "Watchdog: Connection lost, activating safe mode");
+            ESP_LOGD(TAG, "Watchdog: Connection lost, activating safe mode");
             activate_safe_mode();
             return;
         }
@@ -459,8 +459,8 @@ private:
     
             // Very short timeouts for data operations
             struct timeval timeout;
-            timeout.tv_sec = 1;
-            timeout.tv_usec = 0;  // 100000 ->100ms timeout - even shorter
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 100000;  // 100000 ->100ms timeout - even shorter
             ::setsockopt(data_sock_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
             ::setsockopt(data_sock_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     
@@ -489,8 +489,8 @@ private:
                     FD_SET(data_sock_, &write_fds);
                     
                     struct timeval connect_timeout;
-                    connect_timeout.tv_sec = 1;
-                    connect_timeout.tv_usec = 0;  // 100000 ->100ms max wait - very short
+                    connect_timeout.tv_sec = 0;
+                    connect_timeout.tv_usec = 500000;  // 100000 ->100ms max wait - very short
                     
                     int select_result = ::select(data_sock_ + 1, nullptr, &write_fds, nullptr, &connect_timeout);
                     if (select_result <= 0) {
@@ -521,7 +521,7 @@ private:
             // Set back to blocking mode for data transfer but with short timeouts
             ::fcntl(data_sock_, F_SETFL, flags);
 
-            delay(500);
+            delay(200);
     
             ESP_LOGD(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
