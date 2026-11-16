@@ -503,7 +503,6 @@ private:
                         return -1;
                     }
                     
-                    if ( 0 == 1 ) {
                     // Check if connection actually succeeded
                     int error = 0;
                     socklen_t len = sizeof(error);
@@ -513,7 +512,6 @@ private:
                         ::close(data_sock_);
                         data_sock_ = -1;
                         return -1;
-                    }
                     }
                 
                 
