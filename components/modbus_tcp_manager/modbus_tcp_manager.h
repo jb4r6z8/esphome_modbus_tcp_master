@@ -44,7 +44,7 @@ class ModbusTCPManager : public Component {
 public:
     ModbusTCPManager(const std::string &host, uint16_t port, uint8_t unit_id) 
         : host_(host), port_(port), unit_id_(unit_id), 
-          is_connected_(false), last_connection_attempt_(0),
+          is_connected_(false), last_connection_attempt_(0),last_connection_try_(0),
           watchdog_register_(0), watchdog_enabled_(false), 
           watchdog_interval_(10000), last_watchdog_time_(0),
           watchdog_counter_(0), safe_mode_active_(false),
@@ -243,6 +243,7 @@ private:
     uint16_t transaction_id_ = 1;
 
     int data_sock_ = -1;
+    uint32_t last_connection_try_;
     
     // Watchdog variables
     uint16_t watchdog_register_;
@@ -306,7 +307,7 @@ private:
             connection_check_state_ = ConnectionCheckState::CLEANUP;
         } else if (errno != EINPROGRESS) {
             // Immediate failure
-            ESP_LOGV(TAG, "Connection check failed immediately");
+            ESP_LOGD(TAG, "Connection check failed immediately");
             connection_check_state_ = ConnectionCheckState::CLEANUP;
         }
         // If errno == EINPROGRESS, we stay in CONNECTING state
@@ -445,7 +446,9 @@ private:
     }
 
     int create_connection() {
-        if (data_sock_ < 0 ) {
+        uint32_t now = millis();
+        if (data_sock_ < 0 and now - last_connection_try_ > 5000 ) {
+            last_connection_try_ = now;
             data_sock_ = ::socket(AF_INET, SOCK_STREAM, 0);
             if (data_sock_ < 0) {
                 ESP_LOGD(TAG, "Could not create socket: %d", errno);
