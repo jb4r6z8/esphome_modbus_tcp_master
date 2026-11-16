@@ -448,7 +448,7 @@ private:
         if (data_sock_ < 0 ) {
             data_sock_ = ::socket(AF_INET, SOCK_STREAM, 0);
             if (data_sock_ < 0) {
-                ESP_LOGV(TAG, "Could not create socket: %d", errno);
+                ESP_LOGD(TAG, "Could not create socket: %d", errno);
                 data_sock_ = -1;
                 return -1;
             }
@@ -459,8 +459,8 @@ private:
     
             // Very short timeouts for data operations
             struct timeval timeout;
-            timeout.tv_sec = 0;
-            timeout.tv_usec = 500000;  // 100ms timeout - even shorter
+            timeout.tv_sec = 1;
+            timeout.tv_usec = 0;  // 100000 ->100ms timeout - even shorter
             ::setsockopt(data_sock_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
             ::setsockopt(data_sock_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     
@@ -471,7 +471,7 @@ private:
             if (::inet_aton(host_.c_str(), &server_addr.sin_addr) == 0) {
                 struct hostent *he = ::gethostbyname(host_.c_str());
                 if (he == nullptr) {
-                    ESP_LOGV(TAG, "DNS resolution failed: %s", host_.c_str());
+                    ESP_LOGD(TAG, "DNS resolution failed: %s", host_.c_str());
                     ::close(data_sock_);
                     data_sock_ = -1;
                     return -1;
@@ -489,12 +489,12 @@ private:
                     FD_SET(data_sock_, &write_fds);
                     
                     struct timeval connect_timeout;
-                    connect_timeout.tv_sec = 0;
-                    connect_timeout.tv_usec = 500000;  // 100ms max wait - very short
+                    connect_timeout.tv_sec = 1;
+                    connect_timeout.tv_usec = 0;  // 100000 ->100ms max wait - very short
                     
                     int select_result = ::select(data_sock_ + 1, nullptr, &write_fds, nullptr, &connect_timeout);
                     if (select_result <= 0) {
-                        ESP_LOGV(TAG, "Connection timeout to %s:%d", host_.c_str(), port_);
+                        ESP_LOGD(TAG, "Connection timeout to %s:%d", host_.c_str(), port_);
                         ::close(data_sock_);
                         data_sock_ = -1;
                         return -1;
@@ -505,13 +505,13 @@ private:
                     socklen_t len = sizeof(error);
                     ::getsockopt(data_sock_, SOL_SOCKET, SO_ERROR, &error, &len);
                     if (error != 0) {
-                        ESP_LOGV(TAG, "Connection failed to %s:%d (error: %d)", host_.c_str(), port_, error);
+                        ESP_LOGD(TAG, "Connection failed to %s:%d (error: %d)", host_.c_str(), port_, error);
                         ::close(data_sock_);
                         data_sock_ = -1;
                         return -1;
                     }
                 } else {
-                    ESP_LOGV(TAG, "Immediate connection failure to %s:%d", host_.c_str(), port_);
+                    ESP_LOGD(TAG, "Immediate connection failure to %s:%d", host_.c_str(), port_);
                     ::close(data_sock_);
                     data_sock_ = -1;
                     return -1;
@@ -523,7 +523,7 @@ private:
 
             delay(500);
     
-            ESP_LOGVV(TAG, "Connected to %s:%d", host_.c_str(), port_);
+            ESP_LOGD(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
         return data_sock_;
     }
