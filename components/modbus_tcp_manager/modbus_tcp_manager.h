@@ -458,7 +458,7 @@ private:
     
             // Set socket to non-blocking mode FIRST
             int flags = ::fcntl(data_sock_, F_GETFL, 0);
-            //::fcntl(data_sock_, F_SETFL, flags | O_NONBLOCK);
+            ::fcntl(data_sock_, F_SETFL, flags | O_NONBLOCK);
     
             // Very short timeouts for data operations
             struct timeval timeout;
@@ -502,6 +502,8 @@ private:
                         data_sock_ = -1;
                         return -1;
                     }
+                    
+                    if ( 0 == 1 ) {
                     // Check if connection actually succeeded
                     int error = 0;
                     socklen_t len = sizeof(error);
@@ -512,6 +514,9 @@ private:
                         data_sock_ = -1;
                         return -1;
                     }
+                    }
+                
+                
                 } else {
                     ESP_LOGD(TAG, "Immediate connection failure to %s:%d", host_.c_str(), port_);
                     ::close(data_sock_);
