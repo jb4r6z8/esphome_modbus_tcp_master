@@ -502,7 +502,7 @@ private:
                         data_sock_ = -1;
                         return -1;
                     }
-                    
+                    delay(500);
                     // Check if connection actually succeeded
                     int error = 0;
                     socklen_t len = sizeof(error);
@@ -524,7 +524,7 @@ private:
             // Set back to blocking mode for data transfer but with short timeouts
             ::fcntl(data_sock_, F_SETFL, flags);
 
-            delay(200);
+            delay(500);
     
             ESP_LOGD(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
