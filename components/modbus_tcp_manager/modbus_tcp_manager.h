@@ -458,7 +458,7 @@ private:
     
             // Set socket to non-blocking mode FIRST
             int flags = ::fcntl(data_sock_, F_GETFL, 0);
-            ::fcntl(data_sock_, F_SETFL, flags | O_NONBLOCK);
+            //::fcntl(data_sock_, F_SETFL, flags | O_NONBLOCK);
     
             // Very short timeouts for data operations
             struct timeval timeout;
@@ -492,8 +492,8 @@ private:
                     FD_SET(data_sock_, &write_fds);
                     
                     struct timeval connect_timeout;
-                    connect_timeout.tv_sec = 0;
-                    connect_timeout.tv_usec = 500000;  // 100000 ->100ms max wait - very short
+                    connect_timeout.tv_sec = 1;
+                    connect_timeout.tv_usec = 0;  // 100000 ->100ms max wait - very short
                     
                     int select_result = ::select(data_sock_ + 1, nullptr, &write_fds, nullptr, &connect_timeout);
                     if (select_result <= 0) {
@@ -502,7 +502,6 @@ private:
                         data_sock_ = -1;
                         return -1;
                     }
-                    delay(500);
                     // Check if connection actually succeeded
                     int error = 0;
                     socklen_t len = sizeof(error);
