@@ -492,8 +492,8 @@ private:
                     FD_SET(data_sock_, &write_fds);
                     
                     struct timeval connect_timeout;
-                    connect_timeout.tv_sec = 1;
-                    connect_timeout.tv_usec = 0;  // 100000 ->100ms max wait - very short
+                    connect_timeout.tv_sec = 0;
+                    connect_timeout.tv_usec = 500000;  // 100000 ->100ms max wait - very short
                     
                     int select_result = ::select(data_sock_ + 1, nullptr, &write_fds, nullptr, &connect_timeout);
                     if (select_result <= 0) {
@@ -526,7 +526,7 @@ private:
             // Set back to blocking mode for data transfer but with short timeouts
             ::fcntl(data_sock_, F_SETFL, flags);
 
-            delay(200);
+            delay(500);
     
             ESP_LOGD(TAG, "Connected to %s:%d", host_.c_str(), port_);
         }
